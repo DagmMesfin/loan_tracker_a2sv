@@ -37,7 +37,6 @@ type UserUsecase interface {
 	ResetPassword(c context.Context, token string, newPassword string) error
 	UpdateUserDetails(c context.Context, user *User) error
 	LogoutUser(c context.Context, uid string) error
-	// PromoteDemoteUser(c context.Context, userid string, isAdmin bool) error
 	ViewAllUsers(c context.Context) ([]User, error)
 	DeleteUser(c context.Context, uid string) error
 }
@@ -52,7 +51,6 @@ type UserRepository interface {
 	ResetPassword(token string, newPassword string) error
 	UpdateUserDetails(user *User) error
 	LogoutUser(uid string) error
-	// PromoteDemoteUser(userid string, isAdmin bool) error
 	ViewAllUsers() ([]User, error)
 	DeleteUser(uid string) error
 }

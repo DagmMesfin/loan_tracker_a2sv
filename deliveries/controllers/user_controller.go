@@ -115,6 +115,10 @@ func (uc *UserController) TokenRefresh(c *gin.Context) {
 // UserProfile is a controller method to get a user's profile
 func (uc *UserController) UserProfile(c *gin.Context) {
 	uid := c.GetString("userid")
+	if uid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
 	user, err := uc.Userusecase.UserProfile(c, uid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -177,15 +181,10 @@ func (uc *UserController) ResetPassword(c *gin.Context) {
 
 // UpdateUserDetails is a controller method to update user details
 func (uc *UserController) UpdateUserDetails(c *gin.Context) {
-	userID, err := primitive.ObjectIDFromHex(c.GetString("userid"))
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	userID, _ := primitive.ObjectIDFromHex(c.GetString("userid"))
 
 	var user domain.User
-	if err = c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

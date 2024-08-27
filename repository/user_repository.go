@@ -5,6 +5,7 @@ import (
 	"errors"
 	"loan_tracker_api/domain"
 	"loan_tracker_api/infrastructure"
+	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,14 +31,6 @@ func NewUserRepository(mongoClient *mongo.Client) domain.UserRepository {
 }
 
 func (urepo *UserRepository) RegisterUser(user *domain.User) error {
-	usernameFilter := bson.M{"username": user.UserName}
-	usernameExists, err := urepo.collection.CountDocuments(context.TODO(), usernameFilter)
-	if err != nil {
-		return errors.New("User registration failed")
-	}
-	if usernameExists > 0 {
-		return errors.New("Username already exists")
-	}
 
 	emailFilter := bson.M{"email": user.Email}
 	emailExists, err := urepo.collection.CountDocuments(context.TODO(), emailFilter)
@@ -46,6 +39,47 @@ func (urepo *UserRepository) RegisterUser(user *domain.User) error {
 	}
 	if emailExists > 0 {
 		return errors.New("Email already exists")
+	}
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, 2)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		usernameFilter := bson.M{"username": user.UserName}
+		usernameExists, err := urepo.collection.CountDocuments(context.TODO(), usernameFilter)
+		if err != nil {
+			errChan <- errors.New("User registration failed")
+		}
+		if usernameExists > 0 {
+			errChan <- errors.New("Username already exists")
+		}
+		errChan <- nil
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		emailFilter := bson.M{"email": user.Email}
+		emailExists, err := urepo.collection.CountDocuments(context.TODO(), emailFilter)
+		if err != nil {
+			errChan <- errors.New("User registration failed")
+		}
+		if emailExists > 0 {
+			errChan <- errors.New("Email already exists")
+		}
+		errChan <- nil
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
 	}
 
 	user.ID = primitive.NewObjectID()
@@ -122,14 +156,40 @@ func (urepo *UserRepository) LoginUser(user domain.User) (string, string, error)
 		return "", "", errors.New("Invalid password")
 	}
 
-	accessToken, err := infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, true)
-	if err != nil {
-		return "", "", errors.New("Token generation failed")
-	}
+	accessToken := ""
+	refreshToken := ""
 
-	refreshToken, err := infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, false)
-	if err != nil {
-		return "", "", errors.New("Token generation failed")
+	var wg sync.WaitGroup
+	errChan := make(chan error, 2)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		accessToken, err = infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, true)
+		if err != nil {
+			errChan <- errors.New("Token generation failed")
+		}
+		errChan <- nil
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		refreshToken, err = infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, false)
+		if err != nil {
+			errChan <- errors.New("Token generation failed")
+		}
+		errChan <- nil
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return "", "", err
+		}
 	}
 
 	update := bson.M{"$set": bson.M{"refreshtoken": refreshToken}}

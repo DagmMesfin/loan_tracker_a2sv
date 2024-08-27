@@ -54,6 +54,7 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": erro.Error()})
 		return
 	}
+	user.Password = ""
 	c.JSON(200, gin.H{"message": "User registered successfully", "user": user})
 }
 

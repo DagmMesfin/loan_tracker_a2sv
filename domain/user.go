@@ -14,7 +14,7 @@ type User struct {
 	Imageuri     string             `json:"imageuri"`
 	Bio          string             `json:"bio"`
 	Contact      string             `json:"contact"`
-	Password     string             `json:"password"`
+	Password     string             `json:"password,omitempty"`
 	IsAdmin      bool               `json:"isadmin"`
 	JoinedAt     time.Time          `json:"joinedat"`
 	RefreshToken string             `json:"refreshtoken"`

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"loan_tracker_api/domain"
 	"loan_tracker_api/infrastructure"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,6 +16,7 @@ type UserRepository struct {
 	client     *mongo.Client
 	database   *mongo.Database
 	collection *mongo.Collection
+	logDB      *mongo.Collection
 }
 
 func NewUserRepository(mongoClient *mongo.Client) domain.UserRepository {
@@ -22,6 +24,7 @@ func NewUserRepository(mongoClient *mongo.Client) domain.UserRepository {
 		client:     mongoClient,
 		database:   mongoClient.Database("Loan-Tracker"),
 		collection: mongoClient.Database("Loan-Tracker").Collection("Users"),
+		logDB:      mongoClient.Database("Loan-Tracker").Collection("Logs"),
 	}
 
 }
@@ -93,11 +96,29 @@ func (urepo *UserRepository) LoginUser(user domain.User) (string, string, error)
 	}
 
 	if !u.IsVerified {
+		log := domain.Log{
+			ID:        primitive.NewObjectID(),
+			UserID:    u.ID,
+			Activity:  "Failed login attempt due to unverified email",
+			CreatedAt: time.Now(),
+		}
+
+		_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 		return "", "", errors.New("Email not verified")
 	}
 
 	check := infrastructure.PasswordComparator(u.Password, user.Password)
 	if check != nil {
+		log := domain.Log{
+			ID:        primitive.NewObjectID(),
+			UserID:    u.ID,
+			Activity:  "Failed login attempt due to invalid password",
+			CreatedAt: time.Now(),
+		}
+
+		_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 		return "", "", errors.New("Invalid password")
 	}
 
@@ -116,6 +137,15 @@ func (urepo *UserRepository) LoginUser(user domain.User) (string, string, error)
 	if err != nil {
 		return "", "", errors.New("Refresh token update failed")
 	}
+
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    u.ID,
+		Activity:  "User logged in",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
 
 	return refreshToken, accessToken, nil
 }
@@ -161,6 +191,15 @@ func (urepo *UserRepository) ForgotPassword(email string) error {
 		return errors.New("Password reset failed")
 	}
 
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
+		Activity:  "Password reset request",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 	return nil
 }
 
@@ -168,6 +207,13 @@ func (urepo *UserRepository) ResetPassword(token string, newPassword string) err
 	email, err := infrastructure.VerifyToken(token)
 	if err != nil {
 		return errors.New("Token verification failed")
+	}
+
+	var user domain.User
+
+	query := bson.M{"email": email}
+	if err := urepo.collection.FindOne(context.TODO(), query).Decode(&user); err != nil {
+		return errors.New("User not found")
 	}
 
 	hashedPassword, err := infrastructure.PasswordHasher(newPassword)
@@ -182,6 +228,15 @@ func (urepo *UserRepository) ResetPassword(token string, newPassword string) err
 	if err != nil {
 		return errors.New("Password reset failed")
 	}
+
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
+		Activity:  "Password reset successfully",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
 
 	return nil
 }

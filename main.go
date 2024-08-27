@@ -18,7 +18,11 @@ func main() {
 	useruse := usecase.NewUserUsecase(userrepo, time.Second*300)
 	usercont := controllers.NewUserController(useruse)
 
+	loanrepo := repository.NewLoanRepository(client)
+	loanuse := usecase.NewLoanUsecase(loanrepo, time.Second*300)
+	loancont := controllers.NewLoanController(loanuse)
+
 	r := gin.Default()
-	router.SetRouter(r, usercont, client)
+	router.SetRouter(r, usercont, client, loancont)
 	r.Run()
 }

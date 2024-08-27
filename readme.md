@@ -1,90 +1,108 @@
-# Loan Tracker API - Project Documentation
+Certainly! Here's the Loan Tracker API documentation based on your provided template and router endpoints:
 
-## Introduction
+---
 
-The Loan Tracker API is a backend system designed to manage loan applications and user accounts within a financial service context. Built using Golang with the Gin framework and adhering to clean architecture principles, this API offers a robust and scalable solution for handling various functionalities, including user management, loan processing, and administrative tasks. The API ensures secure and efficient data handling, making it a reliable foundation for financial services.
+# Loan Tracker API Documentation
 
-This documentation provides an overview of the API's functionalities, including endpoints for user and admin operations, authentication mechanisms, and system settings. The Loan Tracker API is designed to be flexible and extendable, supporting the evolving needs of a financial service provider.
+## Overview
+The Loan Tracker API is a robust and scalable solution designed to manage loan tracking and related functionalities for both users and administrators. Built with Go, leveraging the Gin framework, this API adheres to Clean Architecture principles, ensuring maintainability, testability, and scalability.
 
-## Technologies Used
+## Core Features
 
-- **Go**: A statically typed, compiled programming language known for its simplicity and performance.
-- **Gin Framework**: A lightweight and fast HTTP web framework for Go, ideal for building RESTful APIs.
-- **MongoDB**: A NoSQL database known for its flexibility and scalability, used for storing task and user data.
-- **JWT (JSON Web Tokens)**: Used for securing API endpoints by providing token-based authentication.
+### User Management
+- **Registration and Login**: Secure authentication with password hashing and JWT token issuance.
+- **Email Verification**: Users can verify their email addresses after registration.
+- **Profile Management**: Users can view and update their profiles.
+- **Password Reset**: Users can reset their password securely via email.
+- **Loan Applications**: Users can apply for loans, view their loan details, and track repayments.
+- **Token Management**: Support for token refresh and user logout.
 
-## The Endpoints
+### Admin Management
+- **User Management**: Admins can manage user accounts, including viewing all users and deleting user accounts.
+- **Loan Management**: Admins can review, approve, or reject loan applications, manage loan details, and delete loans.
+- **System Logs**: Admins can view system logs for audit purposes.
 
-### 1. User Management
+## Clean Architecture Implementation
+The API is structured according to the Clean Architecture paradigm, which separates the code into distinct layers, ensuring that business rules are isolated from implementation details:
 
-#### 1.1 User Registration
-- **Endpoint:** `POST /users/register`
-- **Description:** This endpoint allows new users to register by providing their email, password, and profile details. Upon successful registration, the user receives a confirmation message.
-- **Response:** Success or error message.
+- **Domain Layer**: Contains core business logic and entities. This is the heart of the application, encapsulating business rules that are independent of external systems.
 
-#### 1.2 Email Verification
-- **Endpoint:** `GET /users/verify-email`
-- **Description:** After registration, users must verify their email addresses. The system sends a unique verification token to the user's email, which must be submitted to this endpoint to activate the account.
-- **Parameters:**
-  - `token`: Verification token sent via email.
-  - `email`: User's email address.
-- **Response:** Success or error message.
+- **Use Case Layer**: Implements application-specific business rules. It orchestrates the flow of data to and from the entities, ensuring that all the business rules are followed.
 
-#### 1.3 User Login
-- **Endpoint:** `POST /users/login`
-- **Description:** This endpoint authenticates users by validating their credentials and, if successful, provides access and refresh tokens for future requests.
-- **Response:** Success message with access and refresh tokens, or error message.
+- **Interface Adapters**: Includes controllers, gateways, and presenters. This layer translates data between the use case layer and the external systems, like the web framework (Gin), databases, and third-party APIs.
 
-#### 1.4 Token Refresh
-- **Endpoint:** `POST /users/token/refresh`
-- **Description:** This endpoint allows users to refresh their access token using a valid refresh token, ensuring continued access without needing to reauthenticate.
-- **Response:** New access token or error message.
+- **Frameworks and Drivers**: Contains the details of frameworks, databases, and other implementation details. This layer is responsible for implementing the details specified by the use cases.
 
-#### 1.5 User Profile
-- **Endpoint:** `GET /users/profile`
-- **Description:** This endpoint retrieves the profile information of the authenticated user.
-- **Response:** User profile data.
+## Authentication and Security
+The API uses JWT (JSON Web Tokens) for securing endpoints. Access tokens are issued upon successful authentication and must be provided in the Authorization header for protected routes. Refresh tokens are used to obtain new access tokens when the original tokens expire.
 
-#### 1.6 Password Reset Request
-- **Endpoint:** `POST /users/password-reset`
-- **Description:** Users can request a password reset by providing their email. The system sends a password reset link to the provided email address.
-- **Response:** Success or error message.
+## Routes and Endpoints
 
-#### 1.7 Password Update After Reset
-- **Endpoint:** `POST /users/password-update`
-- **Description:** After receiving the password reset link, users can update their password by submitting the new password and the token received via email.
-- **Response:** Success or error message.
+### User Routes
+- **POST /user/register**: Register a new user.
+- **POST /user/verify-email**: Verify a user's email address.
+- **POST /user/login**: Login and receive an access token.
+- **GET /user/token-refresh**: Refresh the access token (requires authentication).
+- **GET /user/profile**: Retrieve user profile information (requires authentication).
+- **GET /user/logout**: Log out the user (requires authentication).
+- **PUT /user/update**: Update user profile information (requires authentication).
+- **POST /user/password-reset**: Initiate a password reset.
+- **POST /user/password-update**: Update the password after a reset.
 
-### 2. Admin Functionalities
+### Loan Routes
+- **POST /loan/apply**: Submit a loan application (requires authentication).
+- **GET /loan/:loan_id**: View loan details by ID (requires authentication).
 
-#### 2.1 View All Users
-- **Endpoint:** `GET /admin/users`
-- **Description:** This endpoint allows admins to retrieve a list of all registered users.
-- **Response:** A list of users or an error message.
+### Admin Routes
+- **GET /admin/users**: List all users (requires admin authentication).
+- **DELETE /admin/user/:id**: Delete a user by ID (requires admin authentication).
+- **GET /admin/loans**: List all loan applications (requires admin authentication).
+- **PATCH /admin/loans/:loan_id/status**: Approve or reject a loan application by ID (requires admin authentication).
+- **DELETE /admin/loans/:loan_id**: Delete a loan by ID (requires admin authentication).
+- **GET /admin/logs**: View system logs (requires admin authentication).
 
-#### 2.2 Delete User Account
-- **Endpoint:** `DELETE /admin/users/{id}`
-- **Description:** Admins can delete a specific user account by providing the user's ID.
-- **Response:** Success or error message.
+## Testing and Validation
+The API includes comprehensive unit tests to validate business logic at the domain and use case layers, ensuring that all critical functionalities work as expected. Integration tests are also implemented to validate the interaction between different layers of the application.
 
-## Running the API
+## Postman Collection
+A Postman collection is available for easy testing of the API endpoints. The collection includes pre-configured requests for all major routes, ensuring you can test the API quickly and efficiently.
 
-1. **Install Dependencies:** Ensure you have Go and MongoDB installed.
-2. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/DagmMesfin/loan_tracker_a2sv.git
-   ```
-3. **Navigate to the Project Directory:**
-   ```bash
-   cd loan_tracker_a2sv
-   ```
-4. **Set Environment Variables:**
-   ```bash
-   export JWT_SECRET=<your_jwt_secret>
-   export MONGO_URI=<your_mongo_uri>
-   ```
-5. **Run the Application:**
-   ```bash
-   go run main.go
-   ```
+## Repository Structure
+The repository follows a clear and organized structure to support Clean Architecture:
 
+- **/cmd**: Entry point of the application.
+- **/internal**:
+  - **/domain**: Business entities and logic.
+  - **/usecase**: Application business rules.
+  - **/interfaces**: Adapters for the web framework, databases, etc.
+  - **/frameworks**: Implementation of frameworks and drivers.
+  - **/tests**: Unit and integration tests.
+
+## Installation and Setup
+
+1. **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd loan-tracker-api
+    ```
+
+2. **Install dependencies:**
+    ```bash
+    go mod tidy
+    ```
+
+3. **Run the application:**
+    ```bash
+    go run cmd/main.go
+    ```
+
+4. **Run tests:**
+    ```bash
+    go test ./...
+    ```
+
+---
+
+for more information, go here: https://documenter.getpostman.com/view/37336034/2sAXjGduYB
+
+This documentation provides a comprehensive overview of the Loan Tracker API, covering all key aspects, from core features to implementation and testing.

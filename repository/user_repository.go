@@ -5,6 +5,8 @@ import (
 	"errors"
 	"loan_tracker_api/domain"
 	"loan_tracker_api/infrastructure"
+	"sync"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,6 +17,7 @@ type UserRepository struct {
 	client     *mongo.Client
 	database   *mongo.Database
 	collection *mongo.Collection
+	logDB      *mongo.Collection
 }
 
 func NewUserRepository(mongoClient *mongo.Client) domain.UserRepository {
@@ -22,19 +25,12 @@ func NewUserRepository(mongoClient *mongo.Client) domain.UserRepository {
 		client:     mongoClient,
 		database:   mongoClient.Database("Loan-Tracker"),
 		collection: mongoClient.Database("Loan-Tracker").Collection("Users"),
+		logDB:      mongoClient.Database("Loan-Tracker").Collection("Logs"),
 	}
 
 }
 
 func (urepo *UserRepository) RegisterUser(user *domain.User) error {
-	usernameFilter := bson.M{"username": user.UserName}
-	usernameExists, err := urepo.collection.CountDocuments(context.TODO(), usernameFilter)
-	if err != nil {
-		return errors.New("User registration failed")
-	}
-	if usernameExists > 0 {
-		return errors.New("Username already exists")
-	}
 
 	emailFilter := bson.M{"email": user.Email}
 	emailExists, err := urepo.collection.CountDocuments(context.TODO(), emailFilter)
@@ -43,6 +39,47 @@ func (urepo *UserRepository) RegisterUser(user *domain.User) error {
 	}
 	if emailExists > 0 {
 		return errors.New("Email already exists")
+	}
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, 2)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		usernameFilter := bson.M{"username": user.UserName}
+		usernameExists, err := urepo.collection.CountDocuments(context.TODO(), usernameFilter)
+		if err != nil {
+			errChan <- errors.New("User registration failed")
+		}
+		if usernameExists > 0 {
+			errChan <- errors.New("Username already exists")
+		}
+		errChan <- nil
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		emailFilter := bson.M{"email": user.Email}
+		emailExists, err := urepo.collection.CountDocuments(context.TODO(), emailFilter)
+		if err != nil {
+			errChan <- errors.New("User registration failed")
+		}
+		if emailExists > 0 {
+			errChan <- errors.New("Email already exists")
+		}
+		errChan <- nil
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
 	}
 
 	user.ID = primitive.NewObjectID()
@@ -93,22 +130,66 @@ func (urepo *UserRepository) LoginUser(user domain.User) (string, string, error)
 	}
 
 	if !u.IsVerified {
+		log := domain.Log{
+			ID:        primitive.NewObjectID(),
+			UserID:    u.ID,
+			Activity:  "Failed login attempt due to unverified email",
+			CreatedAt: time.Now(),
+		}
+
+		_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 		return "", "", errors.New("Email not verified")
 	}
 
 	check := infrastructure.PasswordComparator(u.Password, user.Password)
 	if check != nil {
+		log := domain.Log{
+			ID:        primitive.NewObjectID(),
+			UserID:    u.ID,
+			Activity:  "Failed login attempt due to invalid password",
+			CreatedAt: time.Now(),
+		}
+
+		_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 		return "", "", errors.New("Invalid password")
 	}
 
-	accessToken, err := infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, true)
-	if err != nil {
-		return "", "", errors.New("Token generation failed")
-	}
+	accessToken := ""
+	refreshToken := ""
 
-	refreshToken, err := infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, false)
-	if err != nil {
-		return "", "", errors.New("Token generation failed")
+	var wg sync.WaitGroup
+	errChan := make(chan error, 2)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		accessToken, err = infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, true)
+		if err != nil {
+			errChan <- errors.New("Token generation failed")
+		}
+		errChan <- nil
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		refreshToken, err = infrastructure.TokenGenerator(u.ID, u.Email, u.IsAdmin, false)
+		if err != nil {
+			errChan <- errors.New("Token generation failed")
+		}
+		errChan <- nil
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return "", "", err
+		}
 	}
 
 	update := bson.M{"$set": bson.M{"refreshtoken": refreshToken}}
@@ -116,6 +197,15 @@ func (urepo *UserRepository) LoginUser(user domain.User) (string, string, error)
 	if err != nil {
 		return "", "", errors.New("Refresh token update failed")
 	}
+
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    u.ID,
+		Activity:  "User logged in",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
 
 	return refreshToken, accessToken, nil
 }
@@ -161,6 +251,15 @@ func (urepo *UserRepository) ForgotPassword(email string) error {
 		return errors.New("Password reset failed")
 	}
 
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
+		Activity:  "Password reset request",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
+
 	return nil
 }
 
@@ -168,6 +267,13 @@ func (urepo *UserRepository) ResetPassword(token string, newPassword string) err
 	email, err := infrastructure.VerifyToken(token)
 	if err != nil {
 		return errors.New("Token verification failed")
+	}
+
+	var user domain.User
+
+	query := bson.M{"email": email}
+	if err := urepo.collection.FindOne(context.TODO(), query).Decode(&user); err != nil {
+		return errors.New("User not found")
 	}
 
 	hashedPassword, err := infrastructure.PasswordHasher(newPassword)
@@ -182,6 +288,15 @@ func (urepo *UserRepository) ResetPassword(token string, newPassword string) err
 	if err != nil {
 		return errors.New("Password reset failed")
 	}
+
+	log := domain.Log{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
+		Activity:  "Password reset successfully",
+		CreatedAt: time.Now(),
+	}
+
+	_, err = urepo.logDB.InsertOne(context.TODO(), log)
 
 	return nil
 }

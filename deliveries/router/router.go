@@ -8,7 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func SetRouter(router *gin.Engine, cu *controllers.UserController, client *mongo.Client) {
+func SetRouter(router *gin.Engine, cu *controllers.UserController, client *mongo.Client, lc *controllers.LoanController) {
 
 	router.POST("/user/register", cu.RegisterUser)
 	router.POST("/user/verify-email", cu.VerifyEmail)
@@ -27,5 +27,14 @@ func SetRouter(router *gin.Engine, cu *controllers.UserController, client *mongo
 		admino.GET("/users", cu.ViewAllUsers)
 		admino.DELETE("/user/:id", cu.DeleteUser)
 	}
+
+	router.POST("/loan/apply", infrastructure.AuthMiddleware(client), lc.ApplyForLoan)
+	router.GET("/loan/:loan_id", infrastructure.AuthMiddleware(client), lc.LoanDetails)
+
+	router.GET("/admin/loans", infrastructure.AuthMiddleware(client), infrastructure.AdminMiddleware, lc.ViewAllLoans)
+	router.PATCH("/admin/loans/:loan_id/status", infrastructure.AuthMiddleware(client), infrastructure.AdminMiddleware, lc.ApproveRejectLoan)
+	router.DELETE("/admin/loans/:loan_id", infrastructure.AuthMiddleware(client), infrastructure.AdminMiddleware, lc.DeleteLoan)
+
+	router.GET("/admin/logs", infrastructure.AuthMiddleware(client), infrastructure.AdminMiddleware, lc.ViewLogs)
 
 }

@@ -1,7 +1,3 @@
-Certainly! Here's the Loan Tracker API documentation based on your provided template and router endpoints:
-
----
-
 # Loan Tracker API Documentation
 
 ## Overview

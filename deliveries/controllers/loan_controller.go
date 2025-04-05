@@ -9,19 +9,27 @@ import (
 	gin "github.com/gin-gonic/gin"
 )
 
-// LoanController struct to hold the usecase
 type LoanController struct {
 	LoanUsecase domain.LoanUsecase
 }
 
-// NewLoanController function to create a new LoanController
 func NewLoanController(luse domain.LoanUsecase) *LoanController {
 	return &LoanController{
 		LoanUsecase: luse,
 	}
 }
 
-// ApplyForLoan function to handle the ApplyForLoan endpoint
+// ApplyForLoan godoc
+// @Summary Apply for a loan
+// @Description Apply for a loan
+// @Tags Loan
+// @Accept json
+// @Produce json
+// @Param loan body domain.Loan true "Loan details"
+// @Success 201 {object} domain.Loan
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /loan/apply [post]
 func (lc *LoanController) ApplyForLoan(c *gin.Context) {
 	userid := c.GetString("userid")
 	var loan domain.Loan
@@ -41,7 +49,17 @@ func (lc *LoanController) ApplyForLoan(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Loan application successful", "loan": loan})
 }
 
-// LoanDetails function to handle the LoanDetails endpoint
+// LoanDetails godocs
+// @Summary Get loan details
+// @Description Get loan details
+// @Tags Loan
+// @Accept json
+// @Produce json
+// @Param loan_id path string true "Loan ID"
+// @Success 200 {object} domain.Loan
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /loan/{loan_id} [get]
 func (lc *LoanController) LoanDetails(c *gin.Context) {
 	userid := c.GetString("userid")
 	loanID := c.Param("loan_id")
@@ -56,7 +74,19 @@ func (lc *LoanController) LoanDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"loan": loan})
 }
 
-// ViewAllLoans function to handle the ViewAllLoans endpoint
+// ViewAllLoans godoc
+// @Summary View all loans
+// @Description View all loans
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param pgnum query int false "Page number"
+// @Param status query string false "Loan status"
+// @Param order query string false "Order by"
+// @Success 200 {object} []domain.Loan
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/loans [get]
 func (lc *LoanController) ViewAllLoans(c *gin.Context) {
 	pgnum, err := strconv.Atoi(c.Query("pgnum"))
 	if err != nil {
@@ -76,7 +106,18 @@ func (lc *LoanController) ViewAllLoans(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"loans": loans})
 }
 
-// ApproveRejectLoan function to handle the ApproveRejectLoan endpoint
+// ApproveRejectLoan godoc
+// @Summary Approve or reject a loan
+// @Description Approve or reject a loan
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param loan_id path string true "Loan ID"
+// @Param status body string true "Loan status (approved/rejected)"
+// @Success 200 {object} map[string]string
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/loans/{loan_id}/status [patch]
 func (lc *LoanController) ApproveRejectLoan(c *gin.Context) {
 	userid := c.GetString("userid")
 	loanID := c.Param("loan_id")
@@ -105,7 +146,17 @@ func (lc *LoanController) ApproveRejectLoan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Loan status updated"})
 }
 
-// DeleteLoan function to handle the DeleteLoan endpoint
+// DeleteLoan godoc
+// @Summary Delete a loan
+// @Description Delete a loan
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param loan_id path string true "Loan ID"
+// @Success 200 {object} map[string]string
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/loans/{loan_id} [delete]
 func (lc *LoanController) DeleteLoan(c *gin.Context) {
 	userid := c.GetString("userid")
 	loanID := c.Param("loan_id")
@@ -120,7 +171,16 @@ func (lc *LoanController) DeleteLoan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Loan deleted"})
 }
 
-// ViewLogs function to handle the ViewLogs endpoint
+// ViewLogs godoc
+// @Summary View logs
+// @Description View logs
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Success 200 {object} []domain.Log
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/logs [get]
 func (lc *LoanController) ViewLogs(c *gin.Context) {
 	logs, err := lc.LoanUsecase.ViewLogs(context.Background())
 

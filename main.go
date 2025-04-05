@@ -3,6 +3,7 @@ package main
 import (
 	"loan_tracker_api/deliveries/controllers"
 	"loan_tracker_api/deliveries/router"
+	_ "loan_tracker_api/docs"
 	"loan_tracker_api/infrastructure"
 	"loan_tracker_api/repository"
 	"loan_tracker_api/usecase"
@@ -10,6 +11,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// @title           Loan Tracker API
+// @version         1.0
+// @description     Loan Tracker API for managing loans and user accounts.
+
+// @contact.name   Dagim Mesfin
+// @contact.email  dagmmesfin99@gmail.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
 
 func main() {
 	client := infrastructure.MongoDBInit() //mongodb initialization

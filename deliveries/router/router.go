@@ -5,10 +5,14 @@ import (
 	"loan_tracker_api/infrastructure"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func SetRouter(router *gin.Engine, cu *controllers.UserController, client *mongo.Client, lc *controllers.LoanController) {
+
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.POST("/user/register", cu.RegisterUser)
 	router.POST("/user/verify-email", cu.VerifyEmail)

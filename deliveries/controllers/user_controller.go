@@ -23,7 +23,17 @@ func NewUserController(Usermgr domain.UserUsecase) *UserController {
 	}
 }
 
-// RegisterUser is a controller method to register a user
+// RegisterUser godoc
+// @Summary Register a new user
+// @Description Register a new user
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user body domain.User true "User details"
+// @Success 201 {object} domain.User
+// @Failure 422 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/register [post]
 func (uc *UserController) RegisterUser(c *gin.Context) {
 
 	var user domain.User
@@ -58,7 +68,17 @@ func (uc *UserController) RegisterUser(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "User registered successfully", "user": user})
 }
 
-// VerifyUserEmail is a controller method to verify a user's email
+// VerifyUserEmail godoc
+// @Summary Verify user email
+// @Description Verify user email
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param token query string true "Verification token"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/verify-email [get]
 func (uc *UserController) VerifyEmail(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
@@ -75,7 +95,17 @@ func (uc *UserController) VerifyEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
 }
 
-// LoginUser is a controller method to login a user
+// LoginUser godoc
+// @Summary Login user
+// @Description Login user
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user body domain.User true "User login details"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/login [post]
 func (uc *UserController) LoginUser(c *gin.Context) {
 
 	var user domain.User
@@ -102,7 +132,17 @@ func (uc *UserController) LoginUser(c *gin.Context) {
 
 }
 
-// TokenRefresh is a controller method to refresh a user's token
+// TokenRefresh godoc
+// @Summary Refresh user token
+// @Description Refresh user token
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param refresh-token query string true "Refresh token"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/token-refresh [get]
 func (uc *UserController) TokenRefresh(c *gin.Context) {
 	refreshToken := c.Query("refresh-token")
 	token, err := uc.Userusecase.TokenRefresh(c, refreshToken)
@@ -113,7 +153,18 @@ func (uc *UserController) TokenRefresh(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "token refreshed", "new-access-token": token})
 }
 
-// UserProfile is a controller method to get a user's profile
+// UserProfile godoc
+// @Summary Get user profile
+// @Description Get user profile
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param userid query string true "User ID"
+// @Success 200 {object} domain.User
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/profile [get]
+// @Security Bearer
 func (uc *UserController) UserProfile(c *gin.Context) {
 	uid := c.GetString("userid")
 	if uid == "" {
@@ -128,7 +179,17 @@ func (uc *UserController) UserProfile(c *gin.Context) {
 	c.JSON(200, gin.H{"user": user})
 }
 
-// ForgotPassword is a controller method to reset a user's password
+// ForgotPassword godoc
+// @Summary Forgot password
+// @Description Forgot password
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param email body string true "User email"
+// @Success 202 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/password-reset [post]
 func (uc *UserController) ForgotPassword(c *gin.Context) {
 
 	var info domain.ResetRequest
@@ -152,6 +213,18 @@ func (uc *UserController) ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "email succefully sent to the email provided"})
 }
 
+// ResetPassword godoc
+// @Summary Reset password
+// @Description Reset password
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param token query string true "Reset token"
+// @Param new_password body string true "New password"
+// @Success 202 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/password-update [post]
 func (uc *UserController) ResetPassword(c *gin.Context) {
 	token := c.Query("token")
 	if token == "" {
@@ -180,7 +253,17 @@ func (uc *UserController) ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Password has been reset successfully"})
 }
 
-// UpdateUserDetails is a controller method to update user details
+// UpdateUserDetails godoc
+// @Summary Update user details
+// @Description Update user details
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param user body domain.User true "User details"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/update [put]
 func (uc *UserController) UpdateUserDetails(c *gin.Context) {
 	userID, _ := primitive.ObjectIDFromHex(c.GetString("userid"))
 
@@ -200,7 +283,17 @@ func (uc *UserController) UpdateUserDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User details updated successfully"})
 }
 
-// LogoutUser is a controller method to logout a user
+// LogoutUser godoc
+// @Summary Logout user
+// @Description Logout user
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/logout [get]
+// @Security Bearer
 func (uc *UserController) LogoutUser(c *gin.Context) {
 	uid := c.GetString("userid")
 	err := uc.Userusecase.LogoutUser(c, uid)
@@ -211,7 +304,17 @@ func (uc *UserController) LogoutUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
 }
 
-// ViewAllUsers is a controller method to view all users
+// ViewAllUsers godoc
+// @Summary View all users
+// @Description View all users
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} []domain.User
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/users [get]
+// @Security Bearer
 func (uc *UserController) ViewAllUsers(c *gin.Context) {
 	users, err := uc.Userusecase.ViewAllUsers(c)
 	if err != nil {
@@ -221,7 +324,18 @@ func (uc *UserController) ViewAllUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
-// DeleteUser is a controller method to delete a user
+// DeleteUser godoc
+// @Summary Delete a user
+// @Description Delete a user
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/user/{id} [delete]
+// @Security Bearer
 func (uc *UserController) DeleteUser(c *gin.Context) {
 	uid := c.Param("id")
 	err := uc.Userusecase.DeleteUser(c, uid)
